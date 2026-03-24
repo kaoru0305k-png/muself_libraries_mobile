@@ -48,7 +48,8 @@ const els = {
     editTagsInput: document.getElementById("editTagsInput"),
     editFavoriteInput: document.getElementById("editFavoriteInput"),
     saveEditBtn: document.getElementById("saveEditBtn"),
-    cancelEditBtn: document.getElementById("cancelEditBtn")
+    cancelEditBtn: document.getElementById("cancelEditBtn"),
+    closeEditBtn: document.getElementById("closeEditBtn")
 };
 
 const repository = {
@@ -839,6 +840,10 @@ const renderer = {
         els.editTagsInput.value = Array.isArray(work.tags) ? work.tags.join(" ") : "";
         els.editFavoriteInput.checked = !!work.favorite;
         els.editModal.hidden = false;
+
+        setTimeout(() => {
+            els.editTitleInput.focus();
+        }, 0);
     },
 
     closeEditModal() {
@@ -943,14 +948,16 @@ const controller = {
 
         page.pageItems.forEach(({ circleName, latestWork, count }) => {
             const card = document.createElement("div");
-            card.className = "card";
+            card.className = "card card-button";
+            card.addEventListener("click", () => {
+                state.currentPage = 1;
+                this.renderCircleDetail(circleName);
+            });
 
             const link = document.createElement("a");
             link.href = "#";
             link.addEventListener("click", (e) => {
                 e.preventDefault();
-                state.currentPage = 1;
-                this.renderCircleDetail(circleName);
             });
 
             const img = document.createElement("img");
@@ -1297,6 +1304,7 @@ const controller = {
 
         els.saveEditBtn.addEventListener("click", () => this.saveEdit());
         els.cancelEditBtn.addEventListener("click", () => this.closeEdit());
+        els.closeEditBtn.addEventListener("click", () => this.closeEdit());
 
         els.editModal.addEventListener("click", (event) => {
             if (event.target === els.editModal) {
