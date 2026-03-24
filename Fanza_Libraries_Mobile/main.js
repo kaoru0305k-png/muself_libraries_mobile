@@ -7,7 +7,8 @@ const state = {
     editingWork: null,
     filteredLibrary: null,
     isHtmlPanelOpen: false,
-    pendingJsonImportMode: "merge"
+    pendingJsonImportMode: "merge",
+    lastImportHistory: null
 };
 
 const els = {
@@ -67,6 +68,21 @@ const repository = {
 
     async save(items) {
         localStorage.setItem("fvl_mobile_library", JSON.stringify(items));
+    },
+
+    async loadImportHistory() {
+        const raw = localStorage.getItem("fvl_mobile_last_import_history");
+        if (!raw) return null;
+
+        try {
+            return JSON.parse(raw);
+        } catch {
+            return null;
+        }
+    },
+
+    async saveImportHistory(history) {
+        localStorage.setItem("fvl_mobile_last_import_history", JSON.stringify(history));
     }
 };
 
@@ -538,6 +554,21 @@ const service = {
         };
     },
 
+        formatExportTimestamp(date = new Date()) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        const hh = String(date.getHours()).padStart(2, "0");
+        const mm = String(date.getMinutes()).padStart(2, "0");
+        const ss = String(date.getSeconds()).padStart(2, "0");
+        return `${y}${m}${d}-${hh}${mm}${ss}`;
+    },
+
+    buildExportFileName(itemCount, date = new Date()) {
+        const stamp = this.formatExportTimestamp(date);
+        return `fvl-mobile-${stamp}-${itemCount}items.json`;
+    },
+
     summarizeJsonPayload(payload, items) {
         const app = payload?.app || "不明";
         const version = payload?.version ?? "不明";
@@ -571,6 +602,33 @@ const ui = {
     hideJsonPreview() {
         els.jsonPreview.textContent = "";
         els.jsonPreview.hidden = true;
+    },
+
+    showSyncInfo(history) {
+        if (!history) {
+            els.syncInfo.textContent = "";
+            els.syncInfo.hidden = true;
+            return;
+        }
+
+        const modeLabel =
+            history.mode === "replace" ? "JSON置き換え" :
+            history.mode === "merge" ? "JSON追加" :
+            history.mode === "html" ? "HTML取り込み" :
+            history.mode || "不明";
+
+        const sourceName = history.sourceName || "不明";
+        const importedAt = history.importedAt || "不明";
+
+        const summary = history.summary || {};
+        const added = summary.addedCount ?? 0;
+        const duplicate = summary.duplicateCount ?? 0;
+        const skipped = summary.skippedCount ?? 0;
+        const total = history.totalCountAfterImport ?? 0;
+
+        els.syncInfo.textContent =
+            `前回同期: ${importedAt} / ${modeLabel} / ${sourceName} / 追加 ${added} 件 / 重複 ${duplicate} 件 / スキップ ${skipped} 件 / 総件数 ${total} 件`;
+        els.syncInfo.hidden = false;
     },
 
     updateTabs() {
@@ -856,6 +914,7 @@ const renderer = {
 const controller = {
     async loadLibrary() {
         const stored = await repository.load();
+        const storedHistory = await repository.loadImportHistory();
         const nextLibrary = [];
 
         stored.forEach((item, index) => {
@@ -866,9 +925,18 @@ const controller = {
         });
 
         state.library = nextLibrary;
+        state.lastImportHistory = storedHistory;
+
         this.refreshView();
         ui.updateTabs();
+        ui.showSyncInfo(storedHistory);
         ui.setStatus(`${state.library.length} 件読み込み済み`, "info");
+    },
+
+    async saveImportHistory(history) {
+        state.lastImportHistory = history;
+        await repository.saveImportHistory(history);
+        ui.showSyncInfo(history);
     },
 
     syncSearchState() {
@@ -1151,6 +1219,18 @@ const controller = {
 
         await commitLibrary(result.library, { resetPage: true, syncSearch: true });
 
+        await this.saveImportHistory({
+            mode: "html",
+            sourceName: "HTML貼り付け",
+            importedAt: new Date().toLocaleString("ja-JP"),
+            summary: {
+                addedCount: result.addedCount,
+                duplicateCount: result.duplicateCount,
+                skippedCount: result.skippedCount
+            },
+            totalCountAfterImport: state.library.length
+        });
+
         ui.setStatus(
             `${result.addedCount} 件追加 / 重複 ${result.duplicateCount} 件 / スキップ ${result.skippedCount} 件 / 総件数 ${state.library.length} 件`,
             "success"
@@ -1170,7 +1250,7 @@ const controller = {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "fanza-library-mobile.json";
+        a.download = service.buildExportFileName(state.library.length);
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -1201,40 +1281,64 @@ const controller = {
         if (mode === "replace") {
             if (!confirm(`現在のライブラリ ${state.library.length} 件を、JSON ${normalizedItems.length} 件で置き換えますか？`)) {
                 return;
-            }
-
-            const deduped = [];
-            normalizedItems.forEach((item, index) => {
-                const normalized = service.normalizeStoredWork(item, index);
-                if (!service.isDuplicateWork(normalized, deduped)) {
-                    deduped.push(normalized);
-                }
-            });
-
-            deduped.forEach((work, index) => {
-                work.order = index;
-            });
-
-            await commitLibrary(deduped, { resetPage: true, syncSearch: true });
-
-            ui.setStatus(
-                `JSON置き換え完了: ${deduped.length} 件を復元しました`,
-                "success"
-            );
-            return;
         }
 
-        const result = service.syncImportedItemsOrder(state.library, normalizedItems, {
-            requireVoiceCategory: false
+        const deduped = [];
+        normalizedItems.forEach((item, index) => {
+            const normalized = service.normalizeStoredWork(item, index);
+            if (!service.isDuplicateWork(normalized, deduped)) {
+                    deduped.push(normalized);
+            }
         });
 
-        await commitLibrary(result.library, { resetPage: true, syncSearch: true });
+        deduped.forEach((work, index) => {
+            work.order = index;
+        });
+
+        await commitLibrary(deduped, { resetPage: true, syncSearch: true });
+
+        await this.saveImportHistory({
+            mode: "replace",
+            sourceName: file.name || "JSONファイル",
+            importedAt: new Date().toLocaleString("ja-JP"),
+            summary: {
+                addedCount: deduped.length,
+                duplicateCount: 0,
+                skippedCount: 0
+            },
+            totalCountAfterImport: state.library.length
+        });
 
         ui.setStatus(
-            `JSON追加完了: 追加 ${result.addedCount} 件 / 重複 ${result.duplicateCount} 件 / 総件数 ${state.library.length} 件`,
+            `JSON置き換え完了: ${deduped.length} 件を復元しました`,
             "success"
         );
-    },
+        return;
+    }
+
+    const result = service.syncImportedItemsOrder(state.library, normalizedItems, {
+        requireVoiceCategory: false
+    });
+
+    await commitLibrary(result.library, { resetPage: true, syncSearch: true });
+
+    await this.saveImportHistory({
+        mode: "merge",
+        sourceName: file.name || "JSONファイル",
+        importedAt: new Date().toLocaleString("ja-JP"),
+        summary: {
+            addedCount: result.addedCount,
+            duplicateCount: result.duplicateCount,
+            skippedCount: result.skippedCount ?? 0
+        },
+        totalCountAfterImport: state.library.length
+    });
+
+    ui.setStatus(
+        `JSON追加完了: 追加 ${result.addedCount} 件 / 重複 ${result.duplicateCount} 件 / 総件数 ${state.library.length} 件`,
+        "success"
+    );
+},
 
     bindEvents() {
         els.toggleHtmlPanelBtn.addEventListener("click", () => {
