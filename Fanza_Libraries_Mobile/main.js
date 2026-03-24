@@ -19,6 +19,7 @@ const els = {
     statusBar: document.getElementById("statusBar"),
     emptyState: document.getElementById("emptyState"),
     jsonPreview: document.getElementById("jsonPreview"),
+    syncInfo: document.getElementById("syncInfo"),
     library: document.getElementById("library"),
     pagination: document.getElementById("pagination"),
     searchBox: document.getElementById("searchBox"),
