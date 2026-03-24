@@ -401,6 +401,17 @@ textarea {
     border-color: #d44;
 }
 
+.sync-info {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 1px solid #d8d8d8;
+    border-radius: 8px;
+    background: #f6f6f6;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #333;
+}
+
 @media (min-width: 680px) {
     #library {
         grid-template-columns: repeat(3, minmax(0, 1fr));
