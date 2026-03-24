@@ -85,9 +85,41 @@
         <div class="modal-panel">
             <div class="modal-header">
                 <h2>作品編集</h2>
+                <button id="closeEditBtn" type="button" class="modal-close-btn" aria-label="閉じる">×</button>
             </div>
-
+            
             <div class="modal-body">
+                <label class="field-label">
+                    <span>タイトル</span>
+                    <input id="editTitleInput" type="text">
+                </label>
+            
+                <label class="field-label">
+                    <span>サークル</span>
+                    <input id="editCircleInput" type="text">
+                </label>
+            
+                <label class="field-label">
+                    <span>URL</span>
+                    <input id="editUrlInput" type="text">
+                </label>
+            
+                <label class="field-label">
+                    <span>サムネイルURL</span>
+                    <input id="editThumbInput" type="text">
+                </label>
+            
+                <label class="field-label">
+                    <span>タグ（空白区切り）</span>
+                    <input id="editTagsInput" type="text">
+                    <small class="field-help">不要なタグはここから消せます</small>
+                </label>
+            
+                <label class="checkbox-label">
+                    <input id="editFavoriteInput" type="checkbox">
+                    お気に入り
+                </label>
+            </div>
                 <label class="field-label">
                     <span>タイトル</span>
                     <input id="editTitleInput" type="text">
