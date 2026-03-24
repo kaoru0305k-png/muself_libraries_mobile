@@ -38,7 +38,7 @@ textarea {
 }
 
 button {
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px 12px;
     border: 1px solid #888;
     border-radius: 8px;
@@ -159,6 +159,8 @@ textarea {
     border-radius: 8px;
     background: #f3f3f3;
     font-size: 12px;
+    width: 100%;
+    justify-content: center;
 }
 
 .chip-wrap {
@@ -204,6 +206,14 @@ textarea {
     object-fit: cover;
     border-radius: 8px;
     background: #eee;
+}
+
+.card.card-button {
+    cursor: pointer;
+}
+
+.card.card-button:active {
+    transform: scale(0.995);
 }
 
 .title {
@@ -261,10 +271,10 @@ textarea {
 .favorite-btn,
 .edit-btn,
 .delete-btn {
-    min-height: 34px;
-    padding: 0 10px;
+    min-height: 38px;
+    padding: 0 12px;
     border: 1px solid #888;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #fff;
     font-size: 12px;
 }
@@ -291,6 +301,11 @@ textarea {
 .pagination-info {
     border: 1px solid #ccc;
     background: #f3f3f3;
+}
+
+.pagination button {
+    min-height: 40px;
+    padding: 0 12px;
 }
 
 .section-heading {
@@ -329,8 +344,22 @@ textarea {
 }
 
 .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 14px 16px 10px;
     border-bottom: 1px solid #ddd;
+}
+
+.modal-close-btn {
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 20px;
+    line-height: 1;
 }
 
 .modal-header h2 {
@@ -350,6 +379,11 @@ textarea {
     flex-direction: column;
     gap: 4px;
     font-size: 13px;
+}
+
+.field-help {
+    font-size: 11px;
+    color: #666;
 }
 
 .modal-actions {
